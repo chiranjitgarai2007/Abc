@@ -22,38 +22,38 @@ class RiddleViewModel(application: Application) : AndroidViewModel(application) 
     val riddles = listOf(
         Riddle(
             levelNumber = 1,
-            question = "4, 8, 16, ?",
-            answer = "32",
-            hint = "Pattern: Multiply by 2\n\n4 x 2 = 8\n8 x 2 = 16\n16 x 2 = ?",
-            explanation = "The sequence doubles each step.\n4 -> 8 -> 16 -> 32"
+            question = "If you multiply me by any other number, the result will always remain the same. What number am I?",
+            answer = "0",
+            hint = "Think about the multiplicative property of zero. Any number times this value is always this value.",
+            explanation = "Multiplying any number by 0 always equals 0 (e.g., 5 x 0 = 0)."
         ),
         Riddle(
             levelNumber = 2,
-            question = "3, 6, 12, 24, ?",
-            answer = "48",
-            hint = "Pattern: Each number doubles\n\n3 x 2 = 6\n6 x 2 = 12\n12 x 2 = 24\n24 x 2 = ?",
-            explanation = "The sequence doubles each step.\n3 -> 6 -> 12 -> 24 -> 48"
+            question = "I am a three-digit number. My hundreds digit is 2. My tens digit is 3 times my hundreds. My ones digit is 4 less than my tens. What number am I?",
+            answer = "262",
+            hint = "Determine each digit step-by-step:\nHundreds = 2\nTens = 3 * 2\nOnes = Tens - 4\nNow combine them.",
+            explanation = "Hundreds digit is 2.\nTens digit is 2 x 3 = 6.\nOnes digit is 6 - 4 = 2.\nCombining them gives 262."
         ),
         Riddle(
             levelNumber = 3,
-            question = "2, 5, 10, 17, ?",
-            answer = "26",
-            hint = "Pattern: Add consecutive odd numbers\n\n2 + 3 = 5\n5 + 5 = 10\n10 + 7 = 17\n17 + 9 = ?",
-            explanation = "Add consecutive odd numbers.\n+3, +5, +7, +9\n17 + 9 = 26"
+            question = "A farmer has 17 sheep. All but 9 of them run away. How many sheep does the farmer have left?",
+            answer = "9",
+            hint = "Read the wording very carefully: 'All but 9' run away.",
+            explanation = "The sentence describes 'all but nine' running away, which directly means exactly 9 sheep are left."
         ),
         Riddle(
             levelNumber = 4,
-            question = "1, 4, 9, 16, ?",
-            answer = "25",
-            hint = "Pattern: Perfect square numbers\n\n1^2 = 1\n2^2 = 4\n3^2 = 9\n4^2 = 16\n5^2 = ?",
-            explanation = "The sequence is perfect squares.\n1, 4, 9, 16, 25"
+            question = "A grandfather, two fathers, and two sons went to a movie together. They bought exactly 3 tickets. Each had one ticket. How many people went in total?",
+            answer = "3",
+            hint = "Think of a family tree. How can someone be both a father and a son at the same time?",
+            explanation = "The group consists of 3 people from 3 generations: a grandfather, his son (who is a father), and his grandson (who is a son)."
         ),
         Riddle(
             levelNumber = 5,
-            question = "5, 10, 20, 40, ?",
-            answer = "80",
-            hint = "Pattern: Multiply by 2\n\n5 x 2 = 10\n10 x 2 = 20\n20 x 2 = 40\n40 x 2 = ?",
-            explanation = "The sequence doubles each step.\n5 -> 10 -> 20 -> 40 -> 80"
+            question = "A water lily doubles in size every day. If it takes 48 days to fully cover a pond, how many days does it take to cover exactly half of the pond?",
+            answer = "47",
+            hint = "If the lily doubles every day, what fraction of the pond was covered the day right before it became fully covered?",
+            explanation = "Since the lily doubles in size every day, on the 47th day the pond was half covered, doubling to full coverage on the 48th day."
         )
     )
 
