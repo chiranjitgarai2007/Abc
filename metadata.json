@@ -1,0 +1,6 @@
+{
+  "name": "MATH",
+  "description": "A modern math practice app",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
