@@ -48,6 +48,8 @@ fun MathRiddlesScreen(
     val showHint by viewModel.showHint.collectAsState()
     val currentLevelIndex by viewModel.currentLevelIndex.collectAsState()
 
+    val vibrationEnabled by viewModel.vibrationEnabled.collectAsState(initial = true)
+
     val currentRiddle = viewModel.riddles[currentLevelIndex]
 
     var showOverlay by remember { mutableStateOf(false) }
@@ -64,7 +66,7 @@ fun MathRiddlesScreen(
 
     LaunchedEffect(isLevelSuccess) {
         if (isLevelSuccess) {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            if (vibrationEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             showOverlay = true
             delay(2500) // Show success dialog for 2.5 seconds
             showOverlay = false
@@ -74,7 +76,7 @@ fun MathRiddlesScreen(
 
     LaunchedEffect(showError) {
         if (showError) {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            if (vibrationEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             snackbarHostState.showSnackbar("Wrong Answer")
             viewModel.dismissError()
         }
@@ -296,19 +298,19 @@ fun MathRiddlesScreen(
                 CustomKeyboard(
                     currentAnswer = currentAnswer,
                     onDigit = { 
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (vibrationEnabled) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         viewModel.inputDigit(it) 
                     },
                     onDelete = { 
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (vibrationEnabled) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         viewModel.deleteDigit() 
                     },
                     onHint = { 
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (vibrationEnabled) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         viewModel.toggleHint() 
                     },
                     onEnter = { 
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (vibrationEnabled) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         viewModel.submitAnswer() 
                     }
                 )

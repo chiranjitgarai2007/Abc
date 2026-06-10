@@ -32,15 +32,106 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
+    viewModel: RiddleViewModel,
     onNavigateToRiddles: () -> Unit,
     snackbarHostState: SnackbarHostState
 ) {
     val coroutineScope = rememberCoroutineScope()
     
+    val currentLevel by viewModel.highestUnlockedLevel.collectAsState(initial = 0)
+    val gameCompleted by viewModel.storage.gameCompleted.collectAsState(initial = false)
+    val soundEnabled by viewModel.soundEnabled.collectAsState(initial = true)
+    val vibrationEnabled by viewModel.vibrationEnabled.collectAsState(initial = true)
+    
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    var showResetConfirmDialog by remember { mutableStateOf(false) }
+
     val showComingSoon = {
         coroutineScope.launch {
             snackbarHostState.showSnackbar("Coming Soon")
         }
+    }
+
+    if (showSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showSettingsDialog = false },
+            title = {
+                Text(
+                    text = "SETTINGS",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp
+                )
+            },
+            text = {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Sound Effects", color = Color.LightGray)
+                        Switch(
+                            checked = soundEnabled,
+                            onCheckedChange = { coroutineScope.launch { viewModel.storage.toggleSound() } },
+                            colors = SwitchDefaults.colors(checkedTrackColor = GlowColor)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Vibration", color = Color.LightGray)
+                        Switch(
+                            checked = vibrationEnabled,
+                            onCheckedChange = { coroutineScope.launch { viewModel.storage.toggleVibration() } },
+                            colors = SwitchDefaults.colors(checkedTrackColor = GlowColor)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { showResetConfirmDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA52A2A)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("RESET PROGRESS", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSettingsDialog = false }) {
+                    Text("CLOSE", color = GlowColor)
+                }
+            },
+            containerColor = Color(0xFF1E1E22)
+        )
+    }
+
+    if (showResetConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirmDialog = false },
+            title = { Text("Are you sure?", color = Color.White) },
+            text = { Text("This will delete all completed levels and start from Level 1.", color = Color.LightGray) },
+            confirmButton = {
+                TextButton(
+                    onClick = { 
+                        viewModel.restartGame()
+                        showResetConfirmDialog = false
+                        showSettingsDialog = false
+                        coroutineScope.launch { snackbarHostState.showSnackbar("Progress Reset") }
+                    }
+                ) {
+                    Text("YES, RESET", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirmDialog = false }) {
+                    Text("CANCEL", color = Color.LightGray)
+                }
+            },
+            containerColor = Color(0xFF1E1E22)
+        )
     }
 
     Box(
@@ -71,7 +162,7 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = { showComingSoon() },
+                    onClick = { showSettingsDialog = true },
                     colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
                 ) {
                     Icon(
@@ -130,10 +221,35 @@ fun HomeScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             // Navigation Options
-            MenuButton(
-                text = "MATH RIDDLES",
-                onClick = onNavigateToRiddles
-            )
+            if (currentLevel > 0 || gameCompleted) {
+                MenuButton(
+                    text = "CONTINUE",
+                    onClick = {
+                        viewModel.loadSavedGame()
+                        onNavigateToRiddles()
+                    },
+                    modifier = Modifier.shadow(
+                        elevation = 12.dp,
+                        shape = RoundedCornerShape(12.dp),
+                        ambientColor = Color.White,
+                        spotColor = Color.White
+                    )
+                )
+                
+                Spacer(modifier = Modifier.height(18.dp))
+                
+                MenuButton(
+                    text = "MATH RIDDLES",
+                    onClick = {
+                         coroutineScope.launch { snackbarHostState.showSnackbar("Restart progress in Settings to start over") }
+                    }
+                )
+            } else {
+                MenuButton(
+                    text = "MATH RIDDLES",
+                    onClick = onNavigateToRiddles
+                )
+            }
             
             Spacer(modifier = Modifier.height(18.dp))
             
@@ -177,7 +293,7 @@ fun HomeScreen(
 }
 
 @Composable
-fun MenuButton(text: String, onClick: () -> Unit) {
+fun MenuButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scaleFactor by animateFloatAsState(targetValue = if (isPressed) 0.95f else 1.0f)
@@ -186,7 +302,7 @@ fun MenuButton(text: String, onClick: () -> Unit) {
         color = Color(0xFF1E1E22),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, if (isPressed) Color.White else GlowColor),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth(0.85f)
             .height(60.dp)
             .scale(scaleFactor)

@@ -41,6 +41,8 @@ class MainActivity : ComponentActivity() {
             modifier = Modifier.padding(innerPadding).fillMaxSize(),
             color = MathBackground
           ) {
+            val viewModel: RiddleViewModel = viewModel()
+            
             NavHost(navController = navController, startDestination = "splash") {
               composable("splash") {
                 com.example.ui.SplashScreen(
@@ -53,12 +55,12 @@ class MainActivity : ComponentActivity() {
               }
               composable("home") {
                 HomeScreen(
+                  viewModel = viewModel,
                   onNavigateToRiddles = { navController.navigate("riddles") },
                   snackbarHostState = snackbarHostState
                 )
               }
               composable("riddles") {
-                val viewModel: RiddleViewModel = viewModel()
                 MathRiddlesScreen(
                   viewModel = viewModel,
                   onBack = { navController.popBackStack() },

@@ -1,9 +1,13 @@
 package com.example.ui
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 data class Riddle(
     val levelNumber: Int,
@@ -13,7 +17,8 @@ data class Riddle(
     val explanation: String
 )
 
-class RiddleViewModel : ViewModel() {
+class RiddleViewModel(application: Application) : AndroidViewModel(application) {
+    val storage = StorageService(application)
     val riddles = listOf(
         Riddle(
             levelNumber = 1,
@@ -70,6 +75,33 @@ class RiddleViewModel : ViewModel() {
     private val _showHint = MutableStateFlow(false)
     val showHint: StateFlow<Boolean> = _showHint.asStateFlow()
 
+    val highestUnlockedLevel = storage.currentLevel
+    val soundEnabled = storage.soundEnabled
+    val vibrationEnabled = storage.vibrationEnabled
+
+    init {
+        viewModelScope.launch {
+            storage.currentLevel.collectLatest { level ->
+                if (!_isGameCompleted.value && level < riddles.size) {
+                    _currentLevelIndex.value = level
+                }
+            }
+        }
+        viewModelScope.launch {
+            storage.gameCompleted.collectLatest { completed ->
+                _isGameCompleted.value = completed
+            }
+        }
+    }
+
+    fun loadSavedGame() {
+        // Loads from datastore (already doing via flow, just clear answers)
+        _currentAnswer.value = ""
+        _isLevelSuccess.value = false
+        _showError.value = false
+        _showHint.value = false
+    }
+
     fun inputDigit(digit: String) {
         if (_isLevelSuccess.value || _isGameCompleted.value) return
         _showError.value = false
@@ -98,12 +130,19 @@ class RiddleViewModel : ViewModel() {
 
     fun nextLevel() {
         if (_currentLevelIndex.value < riddles.size - 1) {
-            _currentLevelIndex.value += 1
+            val nextIdx = _currentLevelIndex.value + 1
+            _currentLevelIndex.value = nextIdx
             _currentAnswer.value = ""
             _isLevelSuccess.value = false
+            viewModelScope.launch {
+                storage.saveCurrentLevel(nextIdx)
+            }
         } else {
             _isLevelSuccess.value = false
             _isGameCompleted.value = true
+            viewModelScope.launch {
+                storage.saveGameCompleted(true)
+            }
         }
     }
 
@@ -114,6 +153,9 @@ class RiddleViewModel : ViewModel() {
         _isGameCompleted.value = false
         _showError.value = false
         _showHint.value = false
+        viewModelScope.launch {
+            storage.resetProgress()
+        }
     }
 
     fun toggleHint() {
