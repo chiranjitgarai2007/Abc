@@ -13,8 +13,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +26,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,27 +42,39 @@ fun MathRiddlesScreen(
     snackbarHostState: SnackbarHostState
 ) {
     val currentAnswer by viewModel.currentAnswer.collectAsState()
-    val isSuccess by viewModel.isSuccess.collectAsState()
+    val isLevelSuccess by viewModel.isLevelSuccess.collectAsState()
+    val isGameCompleted by viewModel.isGameCompleted.collectAsState()
     val showError by viewModel.showError.collectAsState()
     val showHint by viewModel.showHint.collectAsState()
+    val currentLevelIndex by viewModel.currentLevelIndex.collectAsState()
+
+    val currentRiddle = viewModel.riddles[currentLevelIndex]
 
     var showOverlay by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
+    val haptic = LocalHapticFeedback.current
+
     // Loading Animation Effect
-    LaunchedEffect(Unit) {
+    LaunchedEffect(currentLevelIndex) {
+        isLoading = true
         delay(750)
         isLoading = false
     }
 
-    LaunchedEffect(isSuccess) {
-        if (isSuccess) {
+    LaunchedEffect(isLevelSuccess) {
+        if (isLevelSuccess) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             showOverlay = true
+            delay(2500) // Show success dialog for 2.5 seconds
+            showOverlay = false
+            viewModel.nextLevel()
         }
     }
 
     LaunchedEffect(showError) {
         if (showError) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             snackbarHostState.showSnackbar("Wrong Answer")
             viewModel.dismissError()
         }
@@ -97,6 +114,71 @@ fun MathRiddlesScreen(
                     )
                 )
             }
+        } else if (isGameCompleted) {
+            // Premium Completion Screen
+            Column(
+                modifier = Modifier.fillMaxSize().padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.EmojiEvents,
+                    contentDescription = "Trophy",
+                    tint = Color(0xFFFFD700),
+                    modifier = Modifier.size(120.dp)
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "CONGRATULATIONS",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 2.sp
+                    ),
+                    color = Color(0xFFFFD700)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "More Levels Coming Soon",
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    ),
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(48.dp))
+                Button(
+                    onClick = { viewModel.restartGame() },
+                    colors = ButtonDefaults.buttonColors(containerColor = GlowColor),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                ) {
+                    Text(
+                        "RESTART PUZZLES",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp
+                        ),
+                        color = Color.White
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onBack,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color.Gray),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                ) {
+                    Text(
+                        "BACK TO HOME",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp
+                        ),
+                        color = Color.White
+                    )
+                }
+            }
         } else {
             // Screen Content
             Column(
@@ -124,16 +206,26 @@ fun MathRiddlesScreen(
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    Text(
-                        text = "Level 1",
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.sp
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Level ${currentRiddle.levelNumber}",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.sp
+                            )
                         )
-                    )
+                        Text(
+                            text = "LEVEL ${currentRiddle.levelNumber} / 5",
+                            color = GlowColor,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.sp
+                            )
+                        )
+                    }
                     IconButton(
-                        onClick = { /* Grid view or Coming Soon comment */ },
+                        onClick = { /* Grid view */ },
                         colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
                     ) {
                         Icon(
@@ -144,42 +236,81 @@ fun MathRiddlesScreen(
                         )
                     }
                 }
+                
+                // Progress Bar at the top
+                LinearProgressIndicator(
+                    progress = { currentRiddle.levelNumber / 5f },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).padding(vertical = 8.dp),
+                    color = GlowColor,
+                    trackColor = Color.DarkGray
+                )
 
-                // Riddle Content Container
+                // Riddle Content Container with Animation
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "4, 8, 16, ?",
-                            style = MaterialTheme.typography.displayMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                letterSpacing = 2.sp
-                            ),
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Find the missing number in the sequence",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray
-                        )
+                    AnimatedContent(
+                        targetState = currentRiddle.question,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(500)) togetherWith fadeOut(animationSpec = tween(500))
+                        },
+                        label = "riddle_animation"
+                    ) { targetQuestion ->
+                        // Glassmorphism card effect design
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22).copy(alpha = 0.6f)),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier.fillMaxWidth().padding(16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(32.dp).fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = targetQuestion,
+                                    style = MaterialTheme.typography.displayMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        letterSpacing = 2.sp
+                                    ),
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Find the missing number",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        letterSpacing = 2.sp
+                                    ),
+                                    color = GlowColor
+                                )
+                            }
+                        }
                     }
                 }
 
                 // Custom Keyboard
                 CustomKeyboard(
                     currentAnswer = currentAnswer,
-                    onDigit = { viewModel.inputDigit(it) },
-                    onDelete = { viewModel.deleteDigit() },
-                    onHint = { viewModel.toggleHint() },
-                    onEnter = { viewModel.submitAnswer() }
+                    onDigit = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.inputDigit(it) 
+                    },
+                    onDelete = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.deleteDigit() 
+                    },
+                    onHint = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.toggleHint() 
+                    },
+                    onEnter = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.submitAnswer() 
+                    }
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -195,7 +326,7 @@ fun MathRiddlesScreen(
                     }
                 },
                 title = { Text("Information Hint", color = Color.White) },
-                text = { Text("Pattern: Multiply by 2\n\n4 x 2 = 8\n8 x 2 = 16\n16 x 2 = ?", color = Color.LightGray) },
+                text = { Text(currentRiddle.hint, color = Color.LightGray) },
                 containerColor = Color(0xFF1E1E22)
             )
         }
@@ -239,37 +370,25 @@ fun MathRiddlesScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "The sequence doubles each step.\n4 -> 8 -> 16 -> 32",
+                            text = currentRiddle.explanation,
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.LightGray,
                             modifier = Modifier.padding(bottom = 24.dp)
                         )
                         Text(
-                            text = "Next Level Coming Soon",
+                            text = "Loading Next Level...",
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp
                             ),
-                            color = Color.Gray
+                            color = GlowColor
                         )
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Button(
-                            onClick = onBack,
-                            colors = ButtonDefaults.buttonColors(containerColor = CorrectColor),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
-                        ) {
-                            Text(
-                                "BACK TO HOME",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.5.sp
-                                ),
-                                color = Color.White
-                            )
-                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CircularProgressIndicator(
+                            color = CorrectColor,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
@@ -369,7 +488,7 @@ fun RowScope.KeyButton(
     Surface(
         color = if (isPrimary) CorrectColor else Color(0xFF1E1E22),
         shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, if (isPressed) Color.White else GlowColor),
+        border = BorderStroke(1.dp, if (isPressed) Color.White else (if (isPrimary) CorrectColor else GlowColor)),
         modifier = modifier
             .height(56.dp)
             .scale(scaleFactor)
